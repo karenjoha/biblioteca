@@ -4,10 +4,18 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Library</title>
+  <link rel="stylesheet" href="css/library.css">
+
 </head>
 <body>
   <h1>Bienvenido a nuestra librería</h1>
-  
+  <form id="search-form">
+    <label for="search-input">Buscar libros:</label>
+    <input type="text" id="search-input" name="search-input" required>
+    <button type="submit">Buscar</button>
+    <button id="clear-filter-button">Limpiar Filtro</button>
+
+  </form>
   <h2>Listado de Libros</h2>
   <table id="book-table">
     <thead>
@@ -20,7 +28,7 @@
       </tr>
     </thead>
     <tbody>
-      <!-- Aquí se agregarán las filas de la tabla -->
+      <!--Aqui se muestras todas las filas para los registros -->
     </tbody>
   </table>
 
@@ -43,133 +51,7 @@
     <button type="submit">Guardar Libro</button>
   </form>
 
-  <script>
-    const tableBody = document.querySelector('#book-table tbody');
-    const registrationForm = document.getElementById('registration-form');
-    const bookIdInput = document.getElementById('bookId');
+  <script src="js/library.js"></script>
 
-    // Función para cargar los datos del libro en el formulario de registro
-    function loadBookDataForEdit(bookId) {
-      fetch(`/api/books/getBy?_id=${bookId}`)
-        .then(response => response.json())
-        .then(data => {
-          const book = data.book;
-          document.getElementById('bookname').value = book.bookname;
-          document.getElementById('author').value = book.author;
-          document.getElementById('date').value = book.date;
-          document.getElementById('status').value = book.status;
-          bookIdInput.value = book._id; // Set the book ID in a hidden input field
-        })
-        .catch(error => {
-          console.error('Error al obtener el libro:', error);
-          alert('Error al obtener el libro');
-        });
-    }
-
-    // Cargar la lista de libros al cargar la página
-    fetch('/api/books/getAll')
-      .then(response => response.json())
-      .then(data => {
-        data.books.forEach(book => {
-          const row = document.createElement('tr');
-          row.innerHTML = `
-            <td>${book.bookname}</td>
-            <td>${book.author}</td>
-            <td>${book.date}</td>
-            <td>${book.status}</td>
-            <td>
-              <button class="edit-button" data-book-id="${book._id}">Editar</button>
-              <button class="delete-button" data-book-id="${book._id}">Eliminar</button>
-            </td>
-          `;
-          tableBody.appendChild(row);
-        });
-
-        // Agregar un manejador de eventos para el botón "Editar" en cada fila
-        tableBody.addEventListener('click', event => {
-          if (event.target.classList.contains('edit-button')) {
-            const bookId = event.target.getAttribute('data-book-id');
-            loadBookDataForEdit(bookId);
-          }
-          // Agregar un manejador de eventos para el botón "Eliminar" en cada fila
-          if (event.target.classList.contains('delete-button')) {
-            const bookId = event.target.getAttribute('data-book-id');
-            deleteBook(bookId);
-          }
-        });
-      })
-      .catch(error => {
-        console.error('Error al obtener los libros:', error);
-        alert('Error al obtener los libros');
-      });
-
-    // Función para eliminar un libro
-    async function deleteBook(bookId) {
-      try {
-        const response = await fetch(`/api/books/delete?_id=${bookId}`, {
-          method: 'DELETE'
-        });
-
-        if (response.ok) {
-          alert('Libro eliminado correctamente');
-          // Actualizar la tabla después de eliminar el libro
-          location.reload();
-        } else {
-          const errorMessage = await response.text();
-          alert('Error al eliminar el libro: ' + errorMessage);
-        }
-      } catch (error) {
-        console.error('Error al enviar la solicitud de eliminación:', error);
-        alert('Error al eliminar el libro');
-      }
-    }
-
- // Manejar el envío del formulario de registro (para guardar o editar un libro)
-registrationForm.addEventListener('submit', async function(event) {
-  event.preventDefault();
-  
-  const bookId = bookIdInput.value; // Obtener el ID del libro (si existe)
-  const bookname = document.getElementById('bookname').value;
-  const author = document.getElementById('author').value;
-  const date = document.getElementById('date').value;
-  const status = document.getElementById('status').value;
-
-  try {
-    let url = '/api/books/update';
-    let method = 'PUT';
-    let successMessage = 'Libro guardado correctamente'; // Mensaje predeterminado
-
-    // Verificar si hay un ID de libro
-    if (!bookId) {
-      url = '/api/books'; // Cambiar la URL a la de creación si no hay ID
-      method = 'POST'; // Cambiar el método HTTP a POST
-      successMessage = 'Libro creado correctamente'; // Mensaje para creación
-    } else {
-      url += `?_id=${bookId}`; // Agregar el ID del libro a la URL de actualización
-      successMessage = 'Libro actualizado correctamente'; // Mensaje para actualización
-    }
-
-    const response = await fetch(url, {
-      method: method,
-      headers: {
-        'Content-Type': 'application/json'
-      },
-      body: JSON.stringify({ bookname, author, date, status })
-    });
-
-    if (response.ok) {
-      alert(successMessage); // Mostrar el mensaje apropiado según la acción realizada
-      // Redirigir al usuario a otra página o realizar alguna acción adicional
-    } else {
-      const errorMessage = await response.text();
-      alert('Error al guardar el libro: ' + errorMessage);
-    }
-  } catch (error) {
-    console.error('Error al enviar la solicitud:', error);
-    alert('Error al guardar el libro');
-  }
-});
-
-  </script>
 </body>
 </html>

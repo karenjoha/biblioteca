@@ -1,6 +1,7 @@
 const express = require('express');
 const { connectToCollection } = require('./db');
 const { ObjectId } = require('mongodb');
+const jwt = require('jsonwebtoken');
 
 // Crear una instancia de Express
 const app = express();
@@ -27,7 +28,29 @@ async function connectToCollections() {
 connectToCollections()
   .then(({ usersCollection, libraryCollection }) => {
     // Definir las rutas CRUD para la colección 'users'
-    
+    // Ruta para el inicio de sesión
+      app.post('/api/users/login', async (req, res) => {
+        const { username, password } = req.body;
+
+        try {
+          // Verificar las credenciales del usuario en la base de datos
+          const user = await usersCollection.findOne({ username, password });
+
+          // Si el usuario no existe o las credenciales son incorrectas, devolver un error
+          if (!user) {
+            return res.status(401).json({ message: 'Credenciales incorrectas' });
+          }
+
+          // Generar un token JWT con la información del usuario
+          const token = jwt.sign({ username: user.username, userId: user._id }, 'secreto');
+
+          // Enviar el token JWT como respuesta al cliente
+          res.status(200).json({ token });
+        } catch (error) {
+          console.error(error);
+          res.status(500).json({ message: 'Error al iniciar sesión' });
+        }
+      });
     app.post('/api/users', async (req, res) => {
       try {
         const { username, password } = req.body;
@@ -51,20 +74,6 @@ connectToCollections()
         res.status(500).send('Error al registrar usuario.');
       }
     })
-
-
-    //obtener todos
-    app.get("/api/users/all", async (req, res) => {
-      try {
-        const users = await client.find();
-        // Enviar una respuesta de éxito al cliente
-        res.status(201).json({ username: users });
-      } catch (error) {
-        // Si ocurre un error, enviar una respuesta de error al cliente
-        console.error(error);
-        res.status(500).send('Error al encontrar usuarios.');
-      }
-    });
 
     //obtener un usuario
     app.get("/api/users/:id", async (req, res) => {
@@ -188,6 +197,28 @@ connectToCollections()
         // Si ocurre un error, enviar una respuesta de error al cliente
         console.error(error);
         res.status(500).send('Error al encontrar el libro.');
+      }
+    });
+
+    // Endpoint para buscar libros por título o autor
+    app.get('/api/books/search', async (req, res) => {
+      try {
+        const { query } = req.query; // Obtener el parámetro de consulta de la URL
+        
+        // Buscar libros que coincidan con el título o autor proporcionado
+        const searchResults = await libraryCollection.find({
+          $or: [
+            { bookname: { $regex: query, $options: 'i' } }, // Búsqueda por título (ignorando mayúsculas y minúsculas)
+            { author: { $regex: query, $options: 'i' } },   // Búsqueda por autor (ignorando mayúsculas y minúsculas)
+            { date: { $regex: query, $options: 'i' } }, // Búsqueda por autor (ignorando mayúsculas y minúsculas)
+            { status: { $regex: query, $options: 'i' } }    // Búsqueda por autor (ignorando mayúsculas y minúsculas)
+          ]
+        }).toArray();
+    
+        res.json({ books: searchResults }); // Enviar los resultados de la búsqueda como respuesta JSON
+      } catch (error) {
+        console.error('Error al realizar la búsqueda de libros:', error);
+        res.status(500).send('Error al realizar la búsqueda de libros');
       }
     });
 
